@@ -20,7 +20,27 @@ pub fn size(platform: Platform) -> (u32, u32) {
     match platform {
         Platform::Gba => (W, H),
         Platform::Gb | Platform::Gbc => (GB_W, GB_H),
+        other => well_shaped(other),
     }
+}
+
+/// slotPlus's systems: the label at its well's proportion, read from slotPlus's own cart, and
+/// sized to about a GBA label's pixel count, as the Game Boy's is, so composing one costs the same.
+fn well_shaped(platform: Platform) -> (u32, u32) {
+    use crate::cart;
+    let (ww, wh) = match platform {
+        Platform::Ws => (cart::WS_LABEL_W, cart::WS_LABEL_H),
+        Platform::Lynx => (cart::LYNX_LABEL_W, cart::LYNX_LABEL_H),
+        Platform::Gg => (cart::GG_LABEL_W, cart::GG_LABEL_H),
+        Platform::Ngp => (cart::NGP_LABEL_W, cart::NGP_LABEL_H),
+        Platform::Tg16 => (cart::TG16_LABEL_W, cart::TG16_LABEL_H),
+        Platform::Gba | Platform::Gb | Platform::Gbc => return (W, H),
+    };
+    let k = ((W * H) as f32 / (ww * wh) as f32).sqrt();
+    (
+        (ww as f32 * k).round() as u32,
+        (wh as f32 * k).round() as u32,
+    )
 }
 
 /// The logo's box, and where it sits, as fractions of the label rather than pixels of the GBA
@@ -371,9 +391,10 @@ impl Label {
         head: &[u8],
         shell: &str,
         stem: &str,
+        ext: &str,
     ) -> Vec<u8> {
         face::from_rgba(
-            &self.rgba, self.lw, self.lh, platform, code, head, shell, stem,
+            &self.rgba, self.lw, self.lh, platform, code, head, shell, stem, ext,
         )
     }
 
@@ -740,7 +761,7 @@ mod tests {
     fn a_full_label_shows_on_the_cart_face_to_its_corners() {
         let label =
             Label::full(&png_of(&solid(512, 256), 512, 256), Platform::Gba).expect("decodes");
-        let face = label.face(Platform::Gba, "", &[], "", "Probe");
+        let face = label.face(Platform::Gba, "", &[], "", "Probe", "");
         let (x0, y0) = (crate::cart::LABEL_X + 1, crate::cart::LABEL_Y + 1);
         let (x1, y1) = (
             crate::cart::LABEL_X + crate::cart::LABEL_W - 2,
@@ -811,7 +832,7 @@ mod tests {
         };
         let label =
             Label::from_png(&logo, [20, 20, 30], Platform::Gba, Some(band)).expect("decodes");
-        let face = label.face(Platform::Gba, "", &[], "", "Probe");
+        let face = label.face(Platform::Gba, "", &[], "", "Probe", "");
         let (x, y) = (
             crate::cart::LABEL_X + crate::cart::LABEL_W / 2,
             crate::cart::LABEL_Y + 1,

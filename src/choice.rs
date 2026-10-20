@@ -20,8 +20,8 @@ fn value_of(s: Shell) -> String {
 }
 
 /// The shell slot picks for this cart with no choice made, as a value.
-pub fn auto_shell(platform: Platform, code: &str, head: &[u8]) -> String {
-    slot_store::gb::with_header(head, |rom| {
+pub fn auto_shell(platform: Platform, code: &str, head: &[u8], ext: &str) -> String {
+    slot_store::gb::with_rom(head, ext, |rom| {
         value_of(shell::shell_for(&Cart {
             platform,
             stem: String::new(),

@@ -57,6 +57,40 @@ pub(crate) fn cover(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
     })
 }
 
+/// slotPlus's `art::fit_bottom`, from the stash: the art at the box's full width, keeping its
+/// shape, on the box's bottom edge. A HuCard's label keeps its own shape this way. The scale
+/// and placement are slotPlus's code line for line.
+pub(crate) fn fit_bottom(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
+    if path != Path::new(KEY) {
+        return None;
+    }
+    STASH.with(|s| match s.borrow().as_ref()? {
+        Stashed::Png(bytes) => {
+            let (src, sw, sh) = decode(bytes)?;
+            fit_bottom_rgba(&src, sw, sh, w, h)
+        }
+        Stashed::Rgba { px, w: sw, h: sh } => fit_bottom_rgba(px, *sw, *sh, w, h),
+    })
+}
+
+fn fit_bottom_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option<Vec<u8>> {
+    if sw == 0 || sh == 0 {
+        return None;
+    }
+    let scale = (w as f32 / sw as f32).min(h as f32 / sh as f32);
+    let aw = ((sw as f32 * scale).round() as u32).clamp(1, w);
+    let ah = ((sh as f32 * scale).round() as u32).clamp(1, h);
+    let art = cover_rgba(src, sw, sh, aw, ah)?;
+    let (ox, oy) = ((w - aw) / 2, h - ah);
+    let mut out = vec![0u8; (w * h * 4) as usize];
+    for y in 0..ah {
+        let from = (y * aw * 4) as usize;
+        let to = (((y + oy) * w + ox) * 4) as usize;
+        out[to..to + (aw * 4) as usize].copy_from_slice(&art[from..from + (aw * 4) as usize]);
+    }
+    Some(out)
+}
+
 pub(crate) fn cover_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option<Vec<u8>> {
     if sw == 0 || sh == 0 {
         return None;

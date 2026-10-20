@@ -175,7 +175,8 @@ export function createEditor(api) {
     $('ed-shell-custom').value = `#${shell.colour}`;
     press('ed-finish', shell.finish);
     enable('ed-finish', shells && !shell.auto);
-    $('ed-outline-row').hidden = c.platform === 'GBA';
+    // The outline picks a Game Boy pak's shape, so only a Game Boy cart has one to pick.
+    $('ed-outline-row').hidden = c.platform !== 'GB' && c.platform !== 'GBC';
     press('ed-outline', shell.outline);
     enable('ed-outline', shells);
 

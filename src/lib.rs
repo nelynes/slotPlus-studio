@@ -49,8 +49,10 @@ pub fn cart_size(platform: &str) -> Vec<u32> {
 /// A label the card already has, on its cart. `platform` is the card folder the rom sits in,
 /// `GBA`, `GB` or `GBC`, which is how the page names a platform either side of the wasm boundary.
 /// `head` is a Game Boy rom's first 0x150 bytes, which pick its pak; a GBA cart passes none.
-/// `shell` is the cart's value, empty for Automatic.
+/// `shell` is the cart's value, empty for Automatic. `ext` is the rom's extension, which slotPlus
+/// reads a WonderSwan cart's default shell from.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn existing_face(
     png: &[u8],
     platform: &str,
@@ -58,8 +60,17 @@ pub fn existing_face(
     head: &[u8],
     shell: &str,
     stem: &str,
+    ext: &str,
 ) -> Vec<u8> {
-    face::from_png(png, face::platform_of(platform), code, head, shell, stem)
+    face::from_png(
+        png,
+        face::platform_of(platform),
+        code,
+        head,
+        shell,
+        stem,
+        ext,
+    )
 }
 
 /// A ROM's CRC32, fed in the chunks the page reads it in.
@@ -227,9 +238,10 @@ impl JsLabel {
         head: &[u8],
         shell: &str,
         stem: &str,
+        ext: &str,
     ) -> Vec<u8> {
         self.0
-            .face(face::platform_of(platform), code, head, shell, stem)
+            .face(face::platform_of(platform), code, head, shell, stem, ext)
     }
 
     pub fn png(&self) -> Vec<u8> {
@@ -264,8 +276,8 @@ impl JsZip {
 
 /// The shell slot draws this cart in with no choice made.
 #[wasm_bindgen]
-pub fn auto_shell(platform: &str, code: &str, head: &[u8]) -> String {
-    choice::auto_shell(face::platform_of(platform), code, head)
+pub fn auto_shell(platform: &str, code: &str, head: &[u8], ext: &str) -> String {
+    choice::auto_shell(face::platform_of(platform), code, head, ext)
 }
 
 #[wasm_bindgen]

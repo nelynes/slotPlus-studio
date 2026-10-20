@@ -5,18 +5,33 @@
 const DAT = 'https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/no-intro/';
 const THUMBS = 'https://raw.githubusercontent.com/libretro-thumbnails/';
 
-// One database and one thumbnail repository per platform, under libretro's own name for the
-// system: spaces in the database file, underscores in the repository. The platform is the card
-// folder a rom sits in, so a .gbc filed under GB is looked up in the Game Boy database — slot
-// decides a platform by where a file is, and the studio does not second-guess it by extension.
+// One database and one thumbnail repository per system, under libretro's own name for it:
+// spaces in the database file, underscores in the repository. The card folder a rom sits in picks
+// the system, so a .gbc filed under GB is looked up in the Game Boy database — slot decides a
+// platform by where a file is, and the studio does not second-guess it by extension. slotPlus's
+// WonderSwan and NeoGeo Pocket folders each hold two systems, and there the extension says which.
 const NAMES = {
   GBA: 'Nintendo - Game Boy Advance',
   GB: 'Nintendo - Game Boy',
   GBC: 'Nintendo - Game Boy Color',
+  WS: 'Bandai - WonderSwan',
+  Lynx: 'Atari - Lynx',
+  GG: 'Sega - Game Gear',
+  NGP: 'SNK - Neo Geo Pocket',
+  TG16: 'NEC - PC Engine - TurboGrafx 16',
+};
+const BY_EXTENSION = {
+  WS: { wsc: 'Bandai - WonderSwan Color' },
+  NGP: { ngc: 'SNK - Neo Geo Pocket Color', ngpc: 'SNK - Neo Geo Pocket Color' },
 };
 
-export async function fetchDat(platform) {
-  const r = await fetch(`${DAT}${encodeURIComponent(NAMES[platform])}.dat`);
+// The database a cart is looked up in, from its card folder and its file's extension.
+export function dbFor(platform, ext) {
+  return BY_EXTENSION[platform]?.[ext] ?? NAMES[platform];
+}
+
+export async function fetchDat(db) {
+  const r = await fetch(`${DAT}${encodeURIComponent(db)}.dat`);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.text();
 }
@@ -63,8 +78,8 @@ export async function fetchArt(base, path) {
 
 // A thumbnail's bytes, or null when libretro has none. A git symlink comes back as a one-line
 // body naming its target in the same folder; `stubTarget`, from the Rust side, tells the two apart.
-export async function fetchThumb(platform, folder, name, stubTarget) {
-  const repo = NAMES[platform].replaceAll(' ', '_');
+export async function fetchThumb(db, folder, name, stubTarget) {
+  const repo = db.replaceAll(' ', '_');
   const get = async (file) => {
     const r = await fetch(`${THUMBS}${repo}/master/${folder}/${encodeURIComponent(file)}`);
     if (r.status === 404) return null;

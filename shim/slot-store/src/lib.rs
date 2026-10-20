@@ -17,14 +17,24 @@ pub mod gb {
 
     /// Runs `f` with a rom key whose header is `head`, for the length of one draw.
     pub fn with_header<R>(head: &[u8], f: impl FnOnce(&Path) -> R) -> R {
+        with_rom(head, "", f)
+    }
+
+    /// As `with_header`, with the key ending in the rom's own extension. slotPlus reads a cart's
+    /// default shell from it: a `.wsc` game came on a frosted clear WonderSwan Color cart.
+    pub fn with_rom<R>(head: &[u8], ext: &str, f: impl FnOnce(&Path) -> R) -> R {
+        let key = match ext {
+            "" => KEY.to_string(),
+            ext => format!("{KEY}.{ext}"),
+        };
         HEAD.with(|s| *s.borrow_mut() = Some(head.to_vec()));
-        let out = f(Path::new(KEY));
+        let out = f(Path::new(&key));
         HEAD.with(|s| *s.borrow_mut() = None);
         out
     }
 
     fn stashed(rom: &Path) -> Option<Option<Header>> {
-        if rom != Path::new(KEY) {
+        if rom.with_extension("") != Path::new(KEY) {
             return None;
         }
         HEAD.with(|s| s.borrow().as_ref().map(|b| Header::parse(b)))

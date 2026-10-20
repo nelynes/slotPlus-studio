@@ -25,7 +25,7 @@ import init, {
   thumbnail_name,
 } from './pkg/slot_cart_studio.js';
 import { fromDirectory, fromFiles, labelKey, PLATFORMS } from './card.js';
-import { fetchArt, fetchDat, fetchIndex, fetchThumb, limiter } from './libretro.js';
+import { dbFor, fetchArt, fetchDat, fetchIndex, fetchThumb, limiter } from './libretro.js';
 import { createEditor } from './editor.js';
 import { amend, commit } from './history.js';
 import { smallPrint } from './smallprint.js';
@@ -61,12 +61,17 @@ const track = (promise) => {
   });
 };
 
-function newCart({ platform, stem, file }) {
+function newCart({ platform, stem, ext, file }) {
   return {
     // The folder the rom sits in, and so the only thing that says which console it is for.
     platform,
     stem,
+    // The rom's extension. slotPlus reads a WonderSwan cart's default shell from it.
+    ext: ext ?? '',
     file,
+    // The libretro database it is looked up in. The folder picks it, and in slotPlus's WonderSwan
+    // and NeoGeo Pocket folders, which each hold two systems, the extension does.
+    db: dbFor(platform, ext),
     code: '',
     // A Game Boy pak's header, which picks its shell and plastic. Empty on a GBA cart.
     head: new Uint8Array(0),
@@ -74,6 +79,8 @@ function newCart({ platform, stem, file }) {
     shellOnCard: '',
     existingPng: null,
     crc: null,
+    // A HuCard's checksum without a copier header, when it has one. See headerlessCrcOf.
+    crcHeaderless: null,
     game: null,
     // Logos stay PNG bytes, which are small. The label made from one is not kept: see withLabel.
     logoBytes: null,
@@ -216,16 +223,16 @@ const BLANK = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjd
 
 function faceFor(c, kind) {
   if (kind === 'card') return c.existing;
-  if (kind === 'none') return existing_face(new Uint8Array(0), c.platform, c.code, c.head, c.shell, c.stem);
+  if (kind === 'none') return existing_face(new Uint8Array(0), c.platform, c.code, c.head, c.shell, c.stem, c.ext);
   if (kind === 'unfilled') {
     const label = Label.full(BLANK, c.platform);
     try {
-      return label.face(c.platform, c.code, c.head, c.shell, c.stem);
+      return label.face(c.platform, c.code, c.head, c.shell, c.stem, c.ext);
     } finally {
       label.free();
     }
   }
-  return withKindLabel(c, kind, (label) => label.face(c.platform, c.code, c.head, c.shell, c.stem));
+  return withKindLabel(c, kind, (label) => label.face(c.platform, c.code, c.head, c.shell, c.stem, c.ext));
 }
 
 // Whether slot's decoder takes a logo, asked the only way the module can be asked: by making one.
@@ -380,7 +387,7 @@ async function redress(s, c) {
 }
 
 const choiceOf = (c) => {
-  const [outline, colour, finish] = (c.shell || auto_shell(c.platform, c.code, c.head)).split(' ');
+  const [outline, colour, finish] = (c.shell || auto_shell(c.platform, c.code, c.head, c.ext)).split(' ');
   return { outline, colour, finish };
 };
 
@@ -531,7 +538,7 @@ async function open(source) {
   $('write-bar').hidden = true;
   $('fill-open').hidden = true;
   if (session.carts.length === 0) {
-    banner('There are no .gba files in that card’s Games folder.');
+    banner('There are no games in that card’s Games folder.');
     return;
   }
   loading('Reading the card…');
@@ -546,6 +553,21 @@ async function crcOf(file) {
     if (done) return crc.finish();
     crc.update(value);
   }
+}
+
+// A HuCard dumped with a copier's 512-byte header in front: No-Intro lists the card without it.
+const COPIER_HEADER = 512;
+async function headerlessCrcOf(c, file) {
+  if (c.platform !== 'TG16' || file.size % 8192 !== COPIER_HEADER) return null;
+  return crcOf(file.slice(COPIER_HEADER));
+}
+// The game a cart's checksum names, trying the headerless one when the plain one is unknown.
+function gameFor(c) {
+  const db = dats.get(c.db);
+  if (!db) return null;
+  const plain = db.game_for(c.crc);
+  if (plain || c.crcHeaderless == null) return plain ?? null;
+  return db.game_for(c.crcHeaderless) ?? null;
 }
 
 async function identify(s) {
@@ -584,16 +606,18 @@ async function identify(s) {
       // Only a GBA rom carries a game code. On a Game Boy cart 0xAC is inside the RST vectors,
       // so a code read from there is opcode bytes dressed up as one.
       c.code = c.platform === 'GBA' ? header_code(head) : '';
-      if (c.platform !== 'GBA') c.head = head;
+      // Only a Game Boy pak's header picks its shell; slotPlus's carts are chosen by folder.
+      if (c.platform === 'GB' || c.platform === 'GBC') c.head = head;
       const label = s.source.labels.get(labelKey(c.platform, c.stem));
       if (label) {
         const bytes = new Uint8Array(await (await label()).arrayBuffer());
         c.existingPng = bytes;
         c.choice = 'card';
-        c.existing = existing_face(bytes, c.platform, c.code, c.head, c.shell, c.stem);
+        c.existing = existing_face(bytes, c.platform, c.code, c.head, c.shell, c.stem, c.ext);
         c.looking = false;
       } else {
         c.crc = await crcOf(file);
+        c.crcHeaderless = await headerlessCrcOf(c, file);
       }
     } catch (e) {
       if (trapped(e)) return;
@@ -612,15 +636,15 @@ async function identify(s) {
 async function match(s) {
   // One database per platform, fetched only for the platforms this card actually holds: a card
   // of nothing but GBA carts never pays for the two Game Boy databases.
-  for (const platform of new Set(s.carts.map((c) => c.platform))) {
-    if (dats.has(platform)) continue;
+  for (const db of new Set(s.carts.map((c) => c.db))) {
+    if (dats.has(db)) continue;
     try {
-      dats.set(platform, Dat.parse(await fetchDat(platform)));
+      dats.set(db, Dat.parse(await fetchDat(db)));
     } catch (e) {
       if (trapped(e) || s !== session || fatal) return;
       s.datFailed = true;
       banner(
-        `The ${platform} database didn’t load (${e.message}), so carts can’t be matched yet. Logos can still be dropped in by hand.`,
+        `The ${db} database didn’t load (${e.message}), so carts can’t be matched yet. Logos can still be dropped in by hand.`,
         () => track(match(s)),
       );
       for (const c of s.carts) {
@@ -646,7 +670,7 @@ async function art(s, c) {
   c.looking = true;
   paint(c);
   try {
-    c.game = dats.get(c.platform)?.game_for(c.crc) ?? null;
+    c.game = gameFor(c);
     await dress(s, c);
   } catch (e) {
     if (trapped(e)) return;
@@ -660,7 +684,7 @@ async function art(s, c) {
 // checksum names, else under the first dump of the game chosen for it that the set has.
 function artKey(c) {
   const own = c.crc === null ? null : crcHex(c.crc);
-  const db = dats.get(c.platform);
+  const db = dats.get(c.db);
   if (!c.game || !db || (c.crc !== null && db.game_for(c.crc) === c.game)) return own;
   return Array.from(db.crcs_for(c.game), crcHex).find((k) => artIndex?.[k]) ?? null;
 }
@@ -679,7 +703,7 @@ async function dress(s, c) {
     !name
       ? Promise.resolve(null)
       : limit(async () =>
-          s === session && !fatal ? fetchThumb(c.platform, folder, name, stub_target) : null,
+          s === session && !fatal ? fetchThumb(c.db, folder, name, stub_target) : null,
         ).catch(noImage);
   // Logos come from our own set alone, by checksum; libretro is asked only for box art.
   const ours = (media) => {
@@ -693,7 +717,8 @@ async function dress(s, c) {
   // after the logo.
   const boxJob = thumb('Named_Boxarts');
   if (!c.logoBytes) {
-    const logo = await ours('wheel');
+    // slot's art set covers slot's three systems. slotPlus's take libretro's logos by name.
+    const logo = SLOT_SYSTEMS.has(c.platform) ? await ours('wheel') : await thumb('Named_Logos');
     if (s !== session || fatal) return;
     c.logoBytes = logo && readable(logo) ? logo : null;
     // How bright the logo is decides which way its ground goes, so it is measured with the logo.
@@ -713,7 +738,18 @@ const platformsOf = (s) => PLATFORMS.filter((p) => s.carts.some((c) => c.platfor
 
 // A tab per platform on the card, with what it holds. One platform is no choice at all, so a
 // card of nothing but GBA carts shows no switcher and reads exactly as it did before.
-const PLATFORM_NAMES = { GBA: 'Game Boy Advance', GB: 'Game Boy', GBC: 'Game Boy Color' };
+const PLATFORM_NAMES = {
+  GBA: 'Game Boy Advance',
+  GB: 'Game Boy',
+  GBC: 'Game Boy Color',
+  WS: 'WonderSwan',
+  Lynx: 'Atari Lynx',
+  GG: 'Game Gear',
+  NGP: 'NeoGeo Pocket',
+  TG16: 'TurboGrafx-16',
+};
+// The systems slot itself plays, which slot's own art set covers.
+const SLOT_SYSTEMS = new Set(['GBA', 'GB', 'GBC']);
 
 function renderTabs() {
   const s = session;
@@ -849,7 +885,7 @@ async function writeLabels() {
         try {
           [png, face] = withCartLabel(c, (label) => [
             label.png(),
-            label.face(c.platform, c.code, c.head, c.shell, c.stem),
+            label.face(c.platform, c.code, c.head, c.shell, c.stem, c.ext),
           ]);
           c.result = await s.source.write(c.platform, c.stem, png, !!c.existingPng);
         } catch (e) {
@@ -991,10 +1027,14 @@ function shellOf(c) {
 async function lookUp(s, c) {
   paint(c);
   try {
-    if (c.crc === null) c.crc = await crcOf(await c.file());
-    if (!dats.has(c.platform)) dats.set(c.platform, Dat.parse(await fetchDat(c.platform)));
+    if (c.crc === null) {
+      const file = await c.file();
+      c.crc = await crcOf(file);
+      c.crcHeaderless = await headerlessCrcOf(c, file);
+    }
+    if (!dats.has(c.db)) dats.set(c.db, Dat.parse(await fetchDat(c.db)));
     if (s !== session || fatal) return;
-    c.game = dats.get(c.platform).game_for(c.crc) ?? null;
+    c.game = gameFor(c);
     await dress(s, c);
   } catch (e) {
     if (trapped(e)) return;
@@ -1025,7 +1065,7 @@ function noMatch(c) {
 // follow-on inputs wait for a frame.
 function changed(c, soon = false) {
   try {
-    if (c.existingPng) c.existing = existing_face(c.existingPng, c.platform, c.code, c.head, c.shell, c.stem);
+    if (c.existingPng) c.existing = existing_face(c.existingPng, c.platform, c.code, c.head, c.shell, c.stem, c.ext);
   } catch (e) {
     if (trapped(e)) return;
     throw e;
@@ -1069,7 +1109,7 @@ const editor = createEditor({
   useCustomLabel,
   ensureTiles,
   canShell: (c) => !c.looking && ['ready', 'has-label', 'needs-logo', 'unfilled'].includes(stateOf(c)) && shell_key_ok(c.stem),
-  search: (c, query) => dats.get(c.platform)?.search(query, 30) ?? null,
+  search: (c, query) => dats.get(c.db)?.search(query, 30) ?? null,
   chooseGame,
   noMatch,
   readLogo,
@@ -1179,7 +1219,7 @@ $('build').append(
   BUILD === 'dev'
     ? 'dev'
     : Object.assign(document.createElement('a'), {
-        href: `https://github.com/BrandonKowalski/slot-cart-studio/commit/${BUILD}`,
+        href: `https://github.com/nelynes/slotPlus-studio/commit/${BUILD}`,
         textContent: BUILD.slice(0, 7),
       }),
 );

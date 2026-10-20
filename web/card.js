@@ -4,15 +4,26 @@
 
 // slot files a cart under the folder its platform names, in Games/, Labels/, Saves/ and States/
 // alike, and the folder is what decides the platform: the rom is never opened to ask.
-// Listed newest first, which is the order the studio's shelves and tabs run in.
-export const PLATFORMS = ['GBA', 'GBC', 'GB'];
+// slot's three, newest first, then slotPlus's in the order its shelves run. Each is spelled as
+// slotPlus names its card folder.
+export const PLATFORMS = ['GBA', 'GBC', 'GB', 'WS', 'Lynx', 'GG', 'NGP', 'TG16'];
 
-// slot's own rule, from slot-store's platform.rs. A .gba under GB/ is not a Game Boy cart and is
-// passed over in silence, the way slot passes over it.
-const EXTENSIONS = { GBA: ['gba'], GB: ['gb', 'gbc'], GBC: ['gb', 'gbc'] };
-const ANY_ROM = ['gba', 'gb', 'gbc'];
+// slotPlus's own rule, from slot-store's platform.rs. A .gba under GB/ is not a Game Boy cart and
+// is passed over in silence, the way slot passes over it.
+const EXTENSIONS = {
+  GBA: ['gba'],
+  GB: ['gb', 'gbc'],
+  GBC: ['gb', 'gbc'],
+  WS: ['ws', 'wsc'],
+  Lynx: ['lnx', 'lyx'],
+  GG: ['gg'],
+  NGP: ['ngp', 'ngc', 'ngpc'],
+  TG16: ['pce'],
+};
+const ANY_ROM = Object.values(EXTENSIONS).flat();
 
-const named = (dir) => PLATFORMS.find((p) => p === dir.toUpperCase());
+// A card's folders are matched without regard to case, as FAT and exFAT treat them.
+const named = (dir) => PLATFORMS.find((p) => p.toUpperCase() === dir.toUpperCase());
 const ext = (name) => name.slice(name.lastIndexOf('.') + 1).toLowerCase();
 // Never a dotfile: macOS leaves `._` sidecars beside what it copies onto a card, extension and
 // all, so the extension alone cannot tell them from the file they shadow.
@@ -62,7 +73,7 @@ export async function fromDirectory(root) {
     sawPlatform = true;
     for await (const [file, fh] of handle.entries()) {
       if (fh.kind === 'file' && isCart(platform, file)) {
-        carts.push({ platform, stem: stemOf(file), file: () => fh.getFile() });
+        carts.push({ platform, stem: stemOf(file), ext: ext(file), file: () => fh.getFile() });
       }
     }
   }
@@ -196,7 +207,7 @@ export function fromFiles(files) {
     if (!platform) continue;
     if (dir.toLowerCase() === 'games') {
       sawPlatform = true;
-      if (isCart(platform, name)) carts.push({ platform, stem: stemOf(name), file: async () => file });
+      if (isCart(platform, name)) carts.push({ platform, stem: stemOf(name), ext: ext(name), file: async () => file });
     } else if (dir.toLowerCase() === 'labels' && isLabel(name)) {
       labels.set(labelKey(platform, stemOf(name)), async () => file);
     }

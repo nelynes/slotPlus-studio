@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cart Studio · slot</title>
-<meta name="description" content="Cart labels for a slot SD card, made from libretro's logos and checked on the cart before they are written.">
+<title>Cart Studio+ · slotPlus</title>
+<meta name="description" content="Cart labels for every system on a slotPlus SD card, previewed on the cart slotPlus draws before they are written.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap">
@@ -13,23 +13,22 @@
 </head>
 <body>
 <header class="mast">
-  <a class="mast-mark" href="https://slot-cfw.fyi/">slot.</a>
+  <a class="mast-mark" href="https://nelynes.github.io/slotPlus/">slot<span class="dot">.</span><span class="plus" aria-hidden="true">+</span><span class="visually-hidden">Plus</span></a>
   <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="mast-links" aria-label="Sections">
     <span class="menu-bars" aria-hidden="true"></span>
   </button>
-  <nav class="mast-links" id="mast-links" aria-label="slot">
-    <a href="https://slot-cfw.fyi/#install">Installing</a>
-    <a href="https://slot-cfw.fyi/#guide">Guide</a>
-    <a href="https://slot-cfw.fyi/#buttons">Buttons</a>
-    <a href="https://slot-cfw.fyi/#questions">Questions</a>
-    <a href="https://slot-cfw.fyi/#credits">Credits</a>
-    <a href="https://slot-cfw.fyi/#disclosure">AI</a>
-    <a href="./" aria-current="page">Studio</a>
+  <nav class="mast-links" id="mast-links" aria-label="slotPlus">
+    <a href="https://nelynes.github.io/slotPlus/#install">Installing</a>
+    <a href="https://nelynes.github.io/slotPlus/#features"><span class="tab-plus">+</span>Features</a>
+    <a href="https://nelynes.github.io/slotPlus/#systems">Systems</a>
+    <a href="https://nelynes.github.io/slotPlus/#about">About</a>
+    <a href="./" aria-current="page">Studio<span class="tab-plus after">+</span></a>
   </nav>
 </header>
 <main class="wrap">
   <header class="intro">
-    <h1 class="title">Cart Studio</h1>
+    <h1 class="title">Cart Studio<span class="plus" aria-hidden="true">+</span></h1>
+    <p class="lede">Labels for every system on your slotPlus card, each previewed on the cart slotPlus draws.</p>
     <div class="actions">
       <button class="btn" id="pick" type="button" hidden>Choose SD Card</button>
       <label class="btn" id="pick-files-label" hidden>Choose SD Card<input id="pick-files" class="visually-hidden" type="file" webkitdirectory></label>
@@ -61,8 +60,9 @@
 
   <footer class="credits">
     <p>Game names and CRCs from <a href="https://github.com/libretro/libretro-database">libretro-database</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>).</p>
-    <p>Game logos from <a href="https://www.screenscraper.fr/">ScreenScraper</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>).</p>
-    <p>Game Boy is a trademark of Nintendo. Not affiliated with Nintendo.</p>
+    <p>Game Boy logos from <a href="https://www.screenscraper.fr/">ScreenScraper</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>), through slot's art set. Logos for the other systems, and the box art each label's colour is read from, from <a href="https://github.com/libretro-thumbnails">libretro-thumbnails</a>.</p>
+    <p>Built on <a href="https://studio.slot-cfw.fyi">slot's Cart Studio</a> by Brandon Kowalski, under the <a href="https://github.com/nelynes/slotPlus-studio/blob/main/LICENSE">GPL-3.0</a>.</p>
+    <p>Game Boy is a trademark of Nintendo. WonderSwan is a trademark of Bandai. Lynx is a trademark of Atari. Game Gear is a trademark of Sega. NeoGeo Pocket is a trademark of SNK. TurboGrafx-16, PC Engine, TurboExpress and HuCard are trademarks of their respective owners. slotPlus is not affiliated with any of them.</p>
     <p id="build"></p>
   </footer>
 </main>

@@ -19,6 +19,8 @@
   --panel:380px;
   /* The platform tabs and the write button beside them stand this tall on the shelf's edge. */
   --shelf-row:42px;
+  /* slotPlus: the banner's cyan plus. */
+  --plus:#00ffff;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 
@@ -318,3 +320,11 @@ body.editing .cart:not(.current){opacity:.45}
 .tile .badge.on-card{background:var(--shell-accent);color:var(--opening)}
 .tile .add{display:grid;place-items:center;aspect-ratio:1.6;border:2px dashed #55555f;border-radius:4px;color:var(--muted);font-size:24px}
 .tile.has-file .add{display:none}
+
+/* slotPlus's mark and plus signs, as its site sets them. */
+.mast-mark .dot{color:var(--ink)}
+.mast-mark .plus{position:relative;top:-.42em;margin-left:.04em;font-size:.95em;color:var(--plus)}
+.tab-plus{color:var(--plus);font-weight:700;margin-right:1px}
+.tab-plus.after{margin:0 0 0 1px}
+.title .plus{display:inline-block;font-size:.62em;vertical-align:top;margin:-.02em 0 0 .03em;letter-spacing:0;color:var(--plus)}
+.intro .lede{margin:10px auto 0;color:var(--muted);font-size:17px;max-width:52ch}

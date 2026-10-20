@@ -117,7 +117,8 @@ fn assert_same_as_slot(label: &[u8]) {
                 &read_code,
                 &head(d.path()),
                 "",
-                &stem
+                &stem,
+                &dir.to_lowercase()
             ),
             "face differs from slot's in {dir} with code {code:?} and header {gb:?}"
         );
@@ -160,7 +161,17 @@ fn raw_rgba_draws_the_same_face_as_its_png() {
         let d = card("GBA", code, NO_GB, &png);
         let (want, _, stem) = slot_face(d.path());
         assert!(
-            want == face::from_rgba(&raw, w, h, face::platform_of("GBA"), code, &[], "", &stem),
+            want == face::from_rgba(
+                &raw,
+                w,
+                h,
+                face::platform_of("GBA"),
+                code,
+                &[],
+                "",
+                &stem,
+                ""
+            ),
             "raw RGBA face differs with code {code}"
         );
     }
@@ -184,7 +195,7 @@ fn a_composed_label_matches_slot_reading_its_png() {
         let d = card("GBA", code, NO_GB, &png);
         let (want, _, stem) = slot_face(d.path());
         assert!(
-            want == label.face(face::platform_of("GBA"), code, &[], "", &stem),
+            want == label.face(face::platform_of("GBA"), code, &[], "", &stem, ""),
             "composed face differs with code {code}"
         );
     }
@@ -218,7 +229,8 @@ fn a_chosen_shell_matches_slot() {
                 &read_code,
                 &head(d.path()),
                 line,
-                &stem
+                &stem,
+                &dir.to_lowercase()
             ),
             "face differs from slot's in {dir} with {line:?}"
         );
@@ -236,5 +248,89 @@ fn the_game_code_is_read_the_way_slot_reads_it() {
             slot_code,
             "{code:?}"
         );
+    }
+}
+
+/// slotPlus's systems: a card folder, a file extension, and the label shape to try. Each cart is
+/// drawn by the studio from memory and by slotPlus from a card, and the two must agree.
+const SLOTPLUS: [(&str, &str); 6] = [
+    ("WS", "ws"),
+    ("WS", "wsc"),
+    ("Lynx", "lnx"),
+    ("GG", "gg"),
+    ("NGP", "ngc"),
+    ("TG16", "pce"),
+];
+
+fn slotplus_card(dir: &str, ext: &str, label: &[u8]) -> TempDir {
+    let d = tempfile::tempdir().expect("tempdir");
+    for sub in ["Games", "Labels"] {
+        std::fs::create_dir_all(d.path().join(sub).join(dir)).expect("content dir");
+    }
+    std::fs::write(
+        d.path().join(format!("Games/{dir}/{STEM}.{ext}")),
+        vec![0u8; 0x400],
+    )
+    .expect("rom");
+    std::fs::write(d.path().join(format!("Labels/{dir}/{STEM}.png")), label).expect("label");
+    d
+}
+
+#[test]
+fn every_slotplus_cart_matches_slotplus() {
+    // A wide label, a tall one and one with soft edges, so covering, cropping and the HuCard's
+    // own-shape fit are all exercised.
+    let labels = [
+        png_rgb(320, 180, |x, y| [(x % 251) as u8, (y * 3 % 256) as u8, 90]),
+        png_rgb(150, 260, |x, y| [40, (x * 2 % 256) as u8, (y % 256) as u8]),
+        png_rgba(200, 200, |x, y| {
+            [200, 120, (x ^ y) as u8, ((x + y) % 256) as u8]
+        }),
+    ];
+    for (dir, ext) in SLOTPLUS {
+        for (i, label) in labels.iter().enumerate() {
+            let d = slotplus_card(dir, ext, label);
+            let (want, code, stem) = slot_face(d.path());
+            let got = face::from_png(label, face::platform_of(dir), &code, &[], "", &stem, ext);
+            assert!(
+                got == want,
+                "{dir} .{ext} label {i} differs from slotPlus's cart"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_slotplus_cart_with_no_label_gets_slotpluss_generated_one() {
+    for (dir, ext) in SLOTPLUS {
+        let d = slotplus_card(dir, ext, b"not a png");
+        let (want, code, stem) = slot_face(d.path());
+        let got = face::from_png(
+            b"not a png",
+            face::platform_of(dir),
+            &code,
+            &[],
+            "",
+            &stem,
+            ext,
+        );
+        assert!(got == want, "{dir} .{ext} generated label differs");
+    }
+}
+
+#[test]
+fn a_card_folder_names_its_platform_in_any_case() {
+    use slot_store::Platform;
+    for (dir, want) in [
+        ("WS", Platform::Ws),
+        ("lynx", Platform::Lynx),
+        ("LYNX", Platform::Lynx),
+        ("GG", Platform::Gg),
+        ("ngp", Platform::Ngp),
+        ("TG16", Platform::Tg16),
+        ("GBC", Platform::Gbc),
+        ("???", Platform::Gba),
+    ] {
+        assert_eq!(face::platform_of(dir), want, "{dir}");
     }
 }
