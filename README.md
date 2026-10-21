@@ -10,10 +10,12 @@ WonderSwan and WonderSwan Color, Atari Lynx, Game Gear, NeoGeo Pocket and NeoGeo
 TurboGrafx-16. Its carts are drawn by slotPlus's own source, compiled for the browser from
 slotPlusUltra at the commit `slot.ref` names, so a preview is the cart you will see on the handheld.
 
-Each game's logo is looked for in order, and the first source that has one is used:
+Each game's label and logo is looked for in order, and the first source that has one is used:
 
-- **Game Boy, Game Boy Color and Game Boy Advance:** slot's art set, then libretro's logos.
-- **WonderSwan, Atari Lynx, Game Gear, NeoGeo Pocket and TurboGrafx-16:** libretro's logos.
+- **The [slotPlus art set](https://github.com/nelynes/slotPlus-art):** labels and logos made or
+  scanned for slotPlus, for any system. Where it and slot's set both have art for a game, it wins.
+- **slot's art set,** for Game Boy, Game Boy Color and Game Boy Advance.
+- **libretro's logos,** for every system but the Lynx, which libretro has none for.
 - **Any game still without one:** its title screen from libretro, set on the label in the logo's
   place. This is how Lynx carts are dressed, since libretro has no Lynx logos.
 

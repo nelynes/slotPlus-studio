@@ -156,7 +156,26 @@ const crcHex = (crc) => crc.toString(16).toUpperCase().padStart(8, '0');
 // Our own set, published beside the studio. `?art=` points at another, a local one while it is
 // being harvested, and an empty `?art=` leaves every cart to libretro.
 const ART_BASE = new URLSearchParams(location.search).get('art') ?? 'https://art.slot-cfw.fyi/';
+// slotPlus's own set, in the same layout, of labels and logos made or scanned for slotPlus. It is
+// read alongside slot's, and where both have art for a game, slotPlus's wins. `?plusart=` points at
+// another, and an empty one leaves it out.
+const PLUS_ART_BASE =
+  new URLSearchParams(location.search).get('plusart') ?? 'https://nelynes.github.io/slotPlus-art/';
 let artIndex = null;
+
+// One set's index with its paths made whole URLs, so a merged index can hold files from either set
+// and every fetch of one still goes to the set it came from.
+function resolved(index, base) {
+  const out = {};
+  for (const [crc, entry] of Object.entries(index ?? {})) {
+    const e = {};
+    for (const [media, v] of Object.entries(entry ?? {})) {
+      e[media] = typeof v === 'string' ? new URL(v, base).href : v;
+    }
+    out[crc] = e;
+  }
+  return out;
+}
 const fromHex = (value) => [1, 3, 5].map((at) => parseInt(value.slice(at, at + 2), 16));
 // A sure look from the art set, or null: anything missing, unsure or malformed counts as no look.
 const rgbOf = (h) => (typeof h === 'string' && /^[0-9a-f]{6}$/i.test(h) ? fromHex(`#${h}`) : null);
@@ -719,14 +738,15 @@ async function dress(s, c) {
   // after the logo.
   const boxJob = thumb('Named_Boxarts');
   if (!c.logoBytes) {
-    // Each source is tried in turn until one has a logo this studio can read. slot's art set,
-    // found by checksum, covers slot's three systems and comes first for them; libretro's logos,
-    // found by name, cover the rest and back slot's set up. A game with no logo anywhere gets its
-    // title screen from libretro, shown on the label in the logo's place.
-    const sources = SLOT_SYSTEMS.has(c.platform)
-      ? [['art set', () => ours('wheel')], ['libretro', () => thumb('Named_Logos')]]
-      : [['libretro', () => thumb('Named_Logos')]];
-    sources.push(['title', () => thumb('Named_Titles')]);
+    // Each source is tried in turn until one has a logo this studio can read. The art sets come
+    // first, found by checksum: slotPlus's own, which can hold any system, then slot's, which
+    // holds slot's three. Then libretro's logos, found by name. A game with no logo anywhere gets
+    // its title screen from libretro, shown on the label in the logo's place.
+    const sources = [
+      ['art set', () => ours('wheel')],
+      ['libretro', () => thumb('Named_Logos')],
+      ['title', () => thumb('Named_Titles')],
+    ];
     let logo = null;
     c.logoFrom = null;
     for (const [from, get] of sources) {
@@ -766,8 +786,7 @@ const PLATFORM_NAMES = {
   NGP: 'NeoGeo Pocket',
   TG16: 'TurboGrafx-16',
 };
-// The systems slot itself plays, which slot's own art set covers.
-const SLOT_SYSTEMS = new Set(['GBA', 'GB', 'GBC']);
+
 
 function renderTabs() {
   const s = session;
@@ -1145,13 +1164,27 @@ async function start() {
   for (const platform of PLATFORMS) faceBox.set(platform, Array.from(cart_size(platform)));
   // A set of our own, if the address named one. Not having it is not a failure: every cart falls
   // back to libretro, which is all the page had before there was a set to point at.
-  if (ART_BASE) {
-    try {
-      artIndex = await fetchIndex(ART_BASE);
-      console.info(`art set: ${Object.keys(artIndex).length} checksums from ${ART_BASE}`);
-    } catch (e) {
-      banner(`The art set at ${ART_BASE} didn’t load (${e.message}), so carts get slot’s own labels.`);
+  const [slotSet, plusSet] = await Promise.all(
+    [ART_BASE, PLUS_ART_BASE].map((base) =>
+      base
+        ? fetchIndex(base).then(
+            (index) => ({ index: resolved(index, base) }),
+            (error) => ({ error }),
+          )
+        : Promise.resolve({ index: null }),
+    ),
+  );
+  if (slotSet.error) {
+    banner(`The art set at ${ART_BASE} didn’t load (${slotSet.error.message}), so Game Boy carts use libretro’s logos.`);
+  }
+  // slotPlus's set is a bonus on top: when it can't be read, carts carry on without it, quietly.
+  if (plusSet.error) console.warn(`slotPlus art set at ${PLUS_ART_BASE} didn’t load: ${plusSet.error.message}`);
+  if (slotSet.index || plusSet.index) {
+    artIndex = { ...(slotSet.index ?? {}) };
+    for (const [crc, entry] of Object.entries(plusSet.index ?? {})) {
+      artIndex[crc] = { ...(artIndex[crc] ?? {}), ...entry };
     }
+    console.info(`art sets: ${Object.keys(artIndex).length} checksums`);
   }
   const direct = 'showDirectoryPicker' in window;
   $('pick').hidden = !direct;
