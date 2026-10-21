@@ -84,6 +84,8 @@ function newCart({ platform, stem, ext, file }) {
     game: null,
     // Logos stay PNG bytes, which are small. The label made from one is not kept: see withLabel.
     logoBytes: null,
+    // Where the logo came from: 'art set', 'libretro', or 'title' for a title screen in its place.
+    logoFrom: null,
     // The real label's ground and band, measured from its scan: sure looks only.
     look: null,
     choice: null,
@@ -705,7 +707,7 @@ async function dress(s, c) {
       : limit(async () =>
           s === session && !fatal ? fetchThumb(c.db, folder, name, stub_target) : null,
         ).catch(noImage);
-  // Logos come from our own set alone, by checksum; libretro is asked only for box art.
+  // slot's art set, by checksum. libretro, by name, is asked for logos, box art and title screens.
   const ours = (media) => {
     const path = key && artIndex?.[key]?.[media];
     if (!path) return Promise.resolve(null);
@@ -717,10 +719,26 @@ async function dress(s, c) {
   // after the logo.
   const boxJob = thumb('Named_Boxarts');
   if (!c.logoBytes) {
-    // slot's art set covers slot's three systems. slotPlus's take libretro's logos by name.
-    const logo = SLOT_SYSTEMS.has(c.platform) ? await ours('wheel') : await thumb('Named_Logos');
-    if (s !== session || fatal) return;
-    c.logoBytes = logo && readable(logo) ? logo : null;
+    // Each source is tried in turn until one has a logo this studio can read. slot's art set,
+    // found by checksum, covers slot's three systems and comes first for them; libretro's logos,
+    // found by name, cover the rest and back slot's set up. A game with no logo anywhere gets its
+    // title screen from libretro, shown on the label in the logo's place.
+    const sources = SLOT_SYSTEMS.has(c.platform)
+      ? [['art set', () => ours('wheel')], ['libretro', () => thumb('Named_Logos')]]
+      : [['libretro', () => thumb('Named_Logos')]];
+    sources.push(['title', () => thumb('Named_Titles')]);
+    let logo = null;
+    c.logoFrom = null;
+    for (const [from, get] of sources) {
+      const bytes = await get();
+      if (s !== session || fatal) return;
+      if (bytes && readable(bytes)) {
+        logo = bytes;
+        c.logoFrom = from;
+        break;
+      }
+    }
+    c.logoBytes = logo;
     // How bright the logo is decides which way its ground goes, so it is measured with the logo.
     c.logoLuma = c.logoBytes ? logo_luma(c.logoBytes) : 255;
   }
@@ -1090,6 +1108,7 @@ const editor = createEditor({
   fromHex,
   matched: (c) => !!c.game && !c.rejected,
   canLabel,
+  logoFrom: (c) => c.logoFrom,
   canBackground: (c) => stateOf(c) === 'ready' && ['logo', 'customLogo'].includes(wearing(c).kind),
   wearing,
   available: (c, kind) => available(view(c), kind),

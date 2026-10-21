@@ -124,7 +124,7 @@ export function createEditor(api) {
       const badge = tile.querySelector('.badge.default');
       if (badge) badge.hidden = fill !== kind;
       const small = tile.querySelector('small');
-      if (small && (kind === 'real' || kind === 'logo')) small.textContent = retry ? 'Couldn’t load. Click to try again' : ok ? '' : 'None for this game';
+      if (small && (kind === 'real' || kind === 'logo')) small.textContent = retry ? 'Couldn’t load. Click to try again' : ok ? (kind === 'logo' && api.logoFrom(c) === 'title' ? 'From its title screen' : '') : 'None for this game';
       const hasFile = kind === 'customLogo' ? !!c.customLogoBytes : kind === 'customLabel' ? !!c.customLabelBytes : true;
       tile.classList.toggle('has-file', hasFile);
       if (small && (kind === 'customLogo' || kind === 'customLabel')) small.textContent = hasFile ? 'Click again to use another file' : '';
