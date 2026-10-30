@@ -15,6 +15,7 @@ fn value_of(s: Shell) -> String {
         outline: Outline::Auto,
         colour: s.colour,
         finish,
+        back: s.back,
     }
     .to_value()
 }

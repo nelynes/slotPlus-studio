@@ -69,6 +69,9 @@ export function createEditor(api) {
     for (const b of $(group).querySelectorAll('button')) b.disabled = !on;
   };
 
+  // A two-tone shell shows both halves, split corner to corner: front, then back.
+  const paint = (colour, back) => (back ? `linear-gradient(135deg, #${colour} 50%, #${back} 50%)` : `#${colour}`);
+
   // Background and Shell share one palette: the real plastics, by colour.
   function build() {
     if (built) return;
@@ -79,12 +82,14 @@ export function createEditor(api) {
       b.setAttribute('aria-label', name);
       b.dataset.value = value;
       b.dataset.finish = value.split(' ')[2];
-      b.style.backgroundColor = `#${value.split(' ')[1]}`;
+      b.style.background = paint(value.split(' ')[1], value.split(' ')[3]);
       return b;
     };
     for (const id of ['ed-bg-presets', 'ed-shell-presets']) {
       const gap = Object.assign(document.createElement('span'), { className: 'pal-break' });
-      $(id).replaceChildren(...neutrals.map(swatch), gap, ...colours.map(swatch));
+      // A two-tone shell is a shell, not a label colour.
+      const fits = ({ value }) => id === 'ed-shell-presets' || value.split(' ').length < 4;
+      $(id).replaceChildren(...neutrals.filter(fits).map(swatch), gap, ...colours.filter(fits).map(swatch));
     }
   }
 
@@ -165,11 +170,14 @@ export function createEditor(api) {
     const shell = api.shellOf(c);
     const shells = api.canShell(c);
     $('ed-shell').disabled = !shells;
-    $('ed-shell').querySelector('i').style.background = `#${shell.colour}`;
+    $('ed-shell').querySelector('i').style.background = paint(shell.colour, shell.back);
     $('ed-shell').querySelector('span').textContent = shell.auto ? 'Automatic' : shell.name;
     for (const b of $('ed-shell-presets').querySelectorAll('button')) {
-      const [, colour, finish] = b.dataset.value.split(' ');
-      b.setAttribute('aria-pressed', String(!shell.auto && colour === shell.colour && finish === shell.finish));
+      const [, colour, finish, back = ''] = b.dataset.value.split(' ');
+      b.setAttribute(
+        'aria-pressed',
+        String(!shell.auto && colour === shell.colour && finish === shell.finish && back === shell.back),
+      );
     }
     $('ed-shell-auto').setAttribute('aria-pressed', String(shell.auto));
     $('ed-shell-custom').value = `#${shell.colour}`;
@@ -291,9 +299,9 @@ export function createEditor(api) {
   $('ed-shell-presets').addEventListener('click', (e) => {
     const value = e.target.closest('button')?.dataset.value;
     if (!value) return;
-    const [, colour, finish] = value.split(' ');
+    const [, colour, finish, back = ''] = value.split(' ');
     closePops();
-    change((c) => api.setShell(c, { ...api.shellOf(c), colour, finish }));
+    change((c) => api.setShell(c, { ...api.shellOf(c), colour, finish, back }));
   });
   $('ed-shell-auto').addEventListener('click', () => {
     closePops();

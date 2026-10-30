@@ -408,8 +408,9 @@ async function redress(s, c) {
 }
 
 const choiceOf = (c) => {
-  const [outline, colour, finish] = (c.shell || auto_shell(c.platform, c.code, c.head, c.ext)).split(' ');
-  return { outline, colour, finish };
+  // A two-tone shell (a Famicom Mini cart) carries its back's colour as a fourth word.
+  const [outline, colour, finish, back = ''] = (c.shell || auto_shell(c.platform, c.code, c.head, c.ext)).split(' ');
+  return { outline, colour, finish, back };
 };
 
 async function readLogo(file) {
@@ -1056,9 +1057,10 @@ const presets = () =>
   }));
 
 function shellOf(c) {
-  const { outline, colour, finish } = choiceOf(c);
-  const preset = presets().find(({ value }) => value.endsWith(` ${colour} ${finish}`));
-  return { outline, colour, finish, auto: !c.shell, name: preset?.name ?? `#${colour}` };
+  const { outline, colour, finish, back } = choiceOf(c);
+  const tail = ` ${colour} ${finish}${back ? ` ${back}` : ''}`;
+  const preset = presets().find(({ value }) => value.endsWith(tail) && value.split(' ').length === tail.split(' ').length);
+  return { outline, colour, finish, back, auto: !c.shell, name: preset?.name ?? `#${colour}` };
 }
 
 async function lookUp(s, c) {
@@ -1083,7 +1085,7 @@ async function lookUp(s, c) {
 }
 
 function setShell(c, next) {
-  c.shell = next ? `${next.outline} ${next.colour} ${next.finish}` : '';
+  c.shell = next ? `${next.outline} ${next.colour} ${next.finish}${next.back ? ` ${next.back}` : ''}` : '';
 }
 
 function setBackground(c, rgb) {

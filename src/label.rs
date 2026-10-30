@@ -18,7 +18,7 @@ pub const GB_H: u32 = 901;
 /// The label a platform's well wants.
 pub fn size(platform: Platform) -> (u32, u32) {
     match platform {
-        Platform::Gba => (W, H),
+        Platform::Gba | Platform::Gbav => (W, H),
         Platform::Gb | Platform::Gbc => (GB_W, GB_H),
         other => well_shaped(other),
     }
@@ -34,7 +34,8 @@ fn well_shaped(platform: Platform) -> (u32, u32) {
         Platform::Gg => (cart::GG_LABEL_W, cart::GG_LABEL_H),
         Platform::Ngp => (cart::NGP_LABEL_W, cart::NGP_LABEL_H),
         Platform::Tg16 => (cart::TG16_LABEL_W, cart::TG16_LABEL_H),
-        Platform::Gba | Platform::Gb | Platform::Gbc => return (W, H),
+        Platform::Nds => (cart::NDS_LABEL_W, cart::NDS_LABEL_H),
+        Platform::Gba | Platform::Gbav | Platform::Gb | Platform::Gbc => return (W, H),
     };
     let k = ((W * H) as f32 / (ww * wh) as f32).sqrt();
     (

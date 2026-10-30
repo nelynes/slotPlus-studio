@@ -105,8 +105,16 @@ fn automatic_is_what_slot_would_draw_and_presets_are_values() {
         choice::auto_shell(slot_store::Platform::Gba, "AMTE", &[], ""),
         "auto 35353a solid"
     );
+    // The Famicom Mini carts are two-tone: the back's colour is the value's fourth word.
+    assert_eq!(
+        choice::auto_shell(slot_store::Platform::Gba, "FSMJ", &[], ""),
+        "auto 8e1b2b solid e2dbc8"
+    );
     let presets = choice::presets();
-    assert_eq!(presets.len(), 25);
+    assert_eq!(presets.len(), 26);
+    assert!(presets
+        .iter()
+        .any(|p| p == "Famicom Mini red and white\tauto 8e1b2b solid e2dbc8"));
     for p in presets {
         let (_, value) = p.split_once('\t').expect("name\\tvalue");
         assert!(slot_store::ShellChoice::parse(value).is_some(), "{value}");
