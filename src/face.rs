@@ -18,6 +18,7 @@ pub fn platform_of(dir: &str) -> Platform {
         "GG" => Platform::Gg,
         "NGP" => Platform::Ngp,
         "TG16" => Platform::Tg16,
+        "NDS" => Platform::Nds,
         _ => Platform::Gba,
     }
 }

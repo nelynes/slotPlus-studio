@@ -253,13 +253,14 @@ fn the_game_code_is_read_the_way_slot_reads_it() {
 
 /// slotPlus's systems: a card folder, a file extension, and the label shape to try. Each cart is
 /// drawn by the studio from memory and by slotPlus from a card, and the two must agree.
-const SLOTPLUS: [(&str, &str); 6] = [
+const SLOTPLUS: [(&str, &str); 7] = [
     ("WS", "ws"),
     ("WS", "wsc"),
     ("Lynx", "lnx"),
     ("GG", "gg"),
     ("NGP", "ngc"),
     ("TG16", "pce"),
+    ("NDS", "nds"),
 ];
 
 fn slotplus_card(dir: &str, ext: &str, label: &[u8]) -> TempDir {
@@ -328,6 +329,7 @@ fn a_card_folder_names_its_platform_in_any_case() {
         ("GG", Platform::Gg),
         ("ngp", Platform::Ngp),
         ("TG16", Platform::Tg16),
+        ("nds", Platform::Nds),
         ("GBC", Platform::Gbc),
         ("???", Platform::Gba),
     ] {

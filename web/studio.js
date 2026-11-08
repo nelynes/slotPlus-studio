@@ -25,7 +25,7 @@ import init, {
   thumbnail_name,
 } from './pkg/slot_cart_studio.js';
 import { fromDirectory, fromFiles, labelKey, PLATFORMS } from './card.js';
-import { dbFor, fetchArt, fetchDat, fetchIndex, fetchThumb, limiter } from './libretro.js';
+import { dbFor, fetchArt, fetchDat, fetchIndex, fetchThumb, limiter, serialIndex } from './libretro.js';
 import { createEditor } from './editor.js';
 import { amend, commit } from './history.js';
 import { smallPrint } from './smallprint.js';
@@ -567,6 +567,35 @@ async function open(source) {
   track(identify(session));
 }
 
+// A database's text, fetched once however many carts and lookups ask for it.
+const datTexts = new Map();
+function datText(db) {
+  if (!datTexts.has(db)) {
+    const text = fetchDat(db);
+    datTexts.set(db, text);
+    text.catch(() => datTexts.delete(db));
+  }
+  return datTexts.get(db);
+}
+
+const serials = new Map();
+// A DS rom can be hundreds of megabytes, so it isn't read whole: the game code in its header finds
+// the game in the database, and that game's checksum stands in for the file's. A code the database
+// doesn't know matches nothing, and the cart goes to its title screen like any unmatched one.
+async function checksum(c, file) {
+  if (c.platform !== 'NDS') return crcOf(file);
+  const code = String.fromCharCode(...new Uint8Array(await file.slice(0x0c, 0x10).arrayBuffer()));
+  if (!serials.has(c.db)) {
+    try {
+      serials.set(c.db, serialIndex(await datText(c.db)));
+    } catch {
+      // Offline or refused: the lookup that follows says so, with its own banner and retry.
+      return 0;
+    }
+  }
+  return serials.get(c.db).get(code) ?? 0;
+}
+
 async function crcOf(file) {
   const crc = new Crc32();
   const reader = file.stream().getReader();
@@ -638,7 +667,7 @@ async function identify(s) {
         c.existing = existing_face(bytes, c.platform, c.code, c.head, c.shell, c.stem, c.ext);
         c.looking = false;
       } else {
-        c.crc = await crcOf(file);
+        c.crc = await checksum(c, file);
         c.crcHeaderless = await headerlessCrcOf(c, file);
       }
     } catch (e) {
@@ -661,7 +690,7 @@ async function match(s) {
   for (const db of new Set(s.carts.map((c) => c.db))) {
     if (dats.has(db)) continue;
     try {
-      dats.set(db, Dat.parse(await fetchDat(db)));
+      dats.set(db, Dat.parse(await datText(db)));
     } catch (e) {
       if (trapped(e) || s !== session || fatal) return;
       s.datFailed = true;
@@ -786,6 +815,7 @@ const PLATFORM_NAMES = {
   GG: 'Game Gear',
   NGP: 'NeoGeo Pocket',
   TG16: 'TurboGrafx-16',
+  NDS: 'Nintendo DS',
 };
 
 
@@ -1068,10 +1098,10 @@ async function lookUp(s, c) {
   try {
     if (c.crc === null) {
       const file = await c.file();
-      c.crc = await crcOf(file);
+      c.crc = await checksum(c, file);
       c.crcHeaderless = await headerlessCrcOf(c, file);
     }
-    if (!dats.has(c.db)) dats.set(c.db, Dat.parse(await fetchDat(c.db)));
+    if (!dats.has(c.db)) dats.set(c.db, Dat.parse(await datText(c.db)));
     if (s !== session || fatal) return;
     c.game = gameFor(c);
     await dress(s, c);

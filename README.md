@@ -6,8 +6,8 @@ face slotPlus draws. Runs in the browser at
 
 Cart Studio+ is [slot's Cart Studio](https://github.com/BrandonKowalski/slot-cart-studio) for
 slotPlus. It covers slot's Game Boy Advance, Game Boy and Game Boy Color, and slotPlus's
-WonderSwan and WonderSwan Color, Atari Lynx, Game Gear, NeoGeo Pocket and NeoGeo Pocket Color, and
-TurboGrafx-16. Its carts are drawn by slotPlus's own source, compiled for the browser from
+WonderSwan and WonderSwan Color, Atari Lynx, Game Gear, NeoGeo Pocket and NeoGeo Pocket Color,
+TurboGrafx-16 and Nintendo DS. Its carts are drawn by slotPlus's own source, compiled for the browser from
 slotPlusUltra at the commit `slot.ref` names, so a preview is the cart you will see on the handheld.
 
 Each game's label and logo is looked for in order, and the first source that has one is used:
@@ -20,6 +20,7 @@ Each game's label and logo is looked for in order, and the first source that has
   place. This is how Lynx carts are dressed, since libretro has no Lynx logos.
 
 Games are matched in libretro's databases, and each label's colour is read from the game's box art.
+A DS rom is never read whole: the 4-letter game code in its header finds the game.
 You can drop in your own logo or label for any cart.
 
 ## Building
@@ -43,7 +44,7 @@ come from [ScreenScraper](https://www.screenscraper.fr/) (CC BY-NC-SA 4.0), thro
 Logos and box art for the other systems come from
 [libretro-thumbnails](https://github.com/libretro-thumbnails).
 
-Game Boy is a trademark of Nintendo. WonderSwan is a trademark of Bandai. Lynx is a trademark of
+Game Boy and Nintendo DS are trademarks of Nintendo. WonderSwan is a trademark of Bandai. Lynx is a trademark of
 Atari. Game Gear is a trademark of Sega. NeoGeo Pocket is a trademark of SNK. TurboGrafx-16, PC
 Engine, TurboExpress and HuCard are trademarks of their respective owners. Cart Studio+ is not
 affiliated with any of them.

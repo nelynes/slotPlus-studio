@@ -6,7 +6,7 @@
 // alike, and the folder is what decides the platform: the rom is never opened to ask.
 // slot's three, newest first, then slotPlus's in the order its shelves run. Each is spelled as
 // slotPlus names its card folder.
-export const PLATFORMS = ['GBA', 'GBC', 'GB', 'WS', 'Lynx', 'GG', 'NGP', 'TG16'];
+export const PLATFORMS = ['GBA', 'GBC', 'GB', 'WS', 'Lynx', 'GG', 'NGP', 'TG16', 'NDS'];
 
 // slotPlus's own rule, from slot-store's platform.rs. A .gba under GB/ is not a Game Boy cart and
 // is passed over in silence, the way slot passes over it.
@@ -19,6 +19,7 @@ const EXTENSIONS = {
   GG: ['gg'],
   NGP: ['ngp', 'ngc', 'ngpc'],
   TG16: ['pce'],
+  NDS: ['nds'],
 };
 const ANY_ROM = Object.values(EXTENSIONS).flat();
 

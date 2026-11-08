@@ -19,6 +19,7 @@ const NAMES = {
   GG: 'Sega - Game Gear',
   NGP: 'SNK - Neo Geo Pocket',
   TG16: 'NEC - PC Engine - TurboGrafx 16',
+  NDS: 'Nintendo - Nintendo DS',
 };
 const BY_EXTENSION = {
   WS: { wsc: 'Bandai - WonderSwan Color' },
@@ -28,6 +29,25 @@ const BY_EXTENSION = {
 // The database a cart is looked up in, from its card folder and its file's extension.
 export function dbFor(platform, ext) {
   return BY_EXTENSION[platform]?.[ext] ?? NAMES[platform];
+}
+
+// Each game's 4-letter game code, as a DS rom's header carries it at 0x0C, to the checksum of the
+// game's first dump. The DS database lists the code as the game's serial; a code several releases
+// share (a revision, a re-release) keeps the first one listed, and a Virtual Console or demo
+// release only stands in when nothing else carries the code.
+export function serialIndex(text) {
+  const out = new Map();
+  const spare = new Map();
+  for (const [, body] of text.matchAll(/game \(\n([\s\S]*?)\n\)/g)) {
+    const name = body.match(/^\s*name "([^"]*)"/m)?.[1] ?? '';
+    const serial = body.match(/^\s*serial "([A-Z0-9]{4})"/m)?.[1];
+    const crc = body.match(/\bcrc ([0-9A-Fa-f]{8})\b/)?.[1];
+    if (!serial || !crc) continue;
+    const into = /\((Virtual Console|Demo|Kiosk|Wii U Virtual Console)\)/.test(name) ? spare : out;
+    if (!into.has(serial)) into.set(serial, parseInt(crc, 16));
+  }
+  for (const [serial, crc] of spare) if (!out.has(serial)) out.set(serial, crc);
+  return out;
 }
 
 export async function fetchDat(db) {
