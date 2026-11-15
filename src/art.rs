@@ -140,6 +140,28 @@ fn box_average(src: &[u8], sw: u32, sh: u32, x0: f32, y0: f32, x1: f32, y1: f32)
 
 /// Straight RGBA, with slot's decoder settings. `label` and `hue` decode through here too, so a
 /// logo the studio accepts is one slot would.
+/// An SVG drawn to `w` x `h` straight RGBA, as slot's own `art::render_svg` draws it: slot's
+/// handwriting draws its marker cap this way.
+pub(crate) fn render_svg(svg: &str, w: u32, h: u32) -> Option<Vec<u8>> {
+    let tree = usvg::Tree::from_str(svg, &usvg::Options::default()).ok()?;
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(w, h)?;
+    let size = tree.size();
+    let scale =
+        resvg::tiny_skia::Transform::from_scale(w as f32 / size.width(), h as f32 / size.height());
+    resvg::render(&tree, scale, &mut pixmap.as_mut());
+    let mut rgba = pixmap.data().to_vec();
+    for px in rgba.chunks_exact_mut(4) {
+        let a = px[3];
+        if a == 0 || a == 255 {
+            continue;
+        }
+        for c in &mut px[..3] {
+            *c = ((*c as u32 * 255 + a as u32 / 2) / a as u32).min(255) as u8;
+        }
+    }
+    Some(rgba)
+}
+
 pub(crate) fn decode(png: &[u8]) -> Option<(Vec<u8>, u32, u32)> {
     let mut dec = png::Decoder::new(std::io::Cursor::new(png));
     dec.set_transformations(png::Transformations::normalize_to_color8());

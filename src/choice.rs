@@ -31,6 +31,7 @@ pub fn auto_shell(platform: Platform, code: &str, head: &[u8], ext: &str) -> Str
             title: String::new(),
             code: code.to_string(),
             shell: None,
+            tags: Vec::new(),
         }))
     })
 }

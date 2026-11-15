@@ -19,6 +19,7 @@ pub fn platform_of(dir: &str) -> Platform {
         "NGP" => Platform::Ngp,
         "TG16" => Platform::Tg16,
         "NDS" => Platform::Nds,
+        "POKEMINI" => Platform::Pm,
         _ => Platform::Gba,
     }
 }
@@ -46,6 +47,7 @@ fn draw(
             title: String::new(),
             code: code.to_string(),
             shell: slot_store::ShellChoice::parse(shell),
+            tags: Vec::new(),
         })
         .rgba
     })
