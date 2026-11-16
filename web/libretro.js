@@ -20,6 +20,7 @@ const NAMES = {
   NGP: 'SNK - Neo Geo Pocket',
   TG16: 'NEC - PC Engine - TurboGrafx 16',
   NDS: 'Nintendo - Nintendo DS',
+  PokeMini: 'Nintendo - Pokemon Mini',
 };
 const BY_EXTENSION = {
   WS: { wsc: 'Bandai - WonderSwan Color' },

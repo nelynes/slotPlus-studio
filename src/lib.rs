@@ -13,6 +13,10 @@ mod bitmaps;
 mod cart;
 #[allow(dead_code)]
 #[rustfmt::skip]
+#[path = "../../slot/crates/slot-ui/src/hand.rs"]
+mod hand;
+#[allow(dead_code)]
+#[rustfmt::skip]
 #[path = "../../slot/crates/slot-ui/src/shell.rs"]
 mod shell;
 #[allow(dead_code)]

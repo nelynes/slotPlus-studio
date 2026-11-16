@@ -13,6 +13,8 @@ crate-type = ["cdylib", "rlib"]
 crc32fast = "1"
 fontdue = "0.9"
 png = "0.17"
+rustybuzz = "0.20"
+serde_json = "1"
 resvg = { version = "0.48", default-features = false }
 unicode-normalization = "0.1"
 usvg = { version = "0.48", default-features = false }

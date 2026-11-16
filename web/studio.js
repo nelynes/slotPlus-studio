@@ -816,6 +816,7 @@ const PLATFORM_NAMES = {
   NGP: 'NeoGeo Pocket',
   TG16: 'TurboGrafx-16',
   NDS: 'Nintendo DS',
+  PokeMini: 'Pokémon mini',
 };
 
 
