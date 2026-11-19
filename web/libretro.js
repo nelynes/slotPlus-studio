@@ -12,6 +12,8 @@ const THUMBS = 'https://raw.githubusercontent.com/libretro-thumbnails/';
 // WonderSwan and NeoGeo Pocket folders each hold two systems, and there the extension says which.
 const NAMES = {
   GBA: 'Nintendo - Game Boy Advance',
+  // No-Intro and libretro file GBA Video paks with the GBA's games.
+  GBAV: 'Nintendo - Game Boy Advance',
   GB: 'Nintendo - Game Boy',
   GBC: 'Nintendo - Game Boy Color',
   WS: 'Bandai - WonderSwan',
@@ -91,7 +93,8 @@ export async function fetchIndex(base) {
 }
 
 export async function fetchArt(base, path) {
-  const r = await fetch(new URL(path, base));
+  // A merged index holds whole URLs, and with no second set there is no base to resolve against.
+  const r = await fetch(base ? new URL(path, base) : path);
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return new Uint8Array(await r.arrayBuffer());

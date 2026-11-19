@@ -153,12 +153,13 @@ const baseDeep = (c) => lookOf(c)?.ground ?? Array.from(stopsOf(c)).slice(0, 3);
 const hex = (rgb) => `#${[...rgb].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 // A checksum as the set names its files: eight upper case hex digits.
 const crcHex = (crc) => crc.toString(16).toUpperCase().padStart(8, '0');
-// Our own set, published beside the studio. `?art=` points at another, a local one while it is
-// being harvested, and an empty `?art=` leaves every cart to libretro.
-const ART_BASE = new URLSearchParams(location.search).get('art') ?? 'https://art.slot-cfw.fyi/';
-// slotPlus's own set, in the same layout, of labels and logos made or scanned for slotPlus. It is
-// read alongside slot's, and where both have art for a game, slotPlus's wins. `?plusart=` points at
-// another, and an empty one leaves it out.
+// A second set, read under slotPlus's, only when `?art=` names one: a local one while it is being
+// harvested, say. slot's own set at art.slot-cfw.fyi sends no access-control-allow-origin header,
+// so this page can't read it; slotPlus's set carries a copy of it instead.
+const ART_BASE = new URLSearchParams(location.search).get('art') ?? '';
+// slotPlus's own set: labels and logos made or scanned for slotPlus, and a copy of slot's. Where
+// both sets have art for a game, slotPlus's wins. `?plusart=` points at another, and an empty one
+// leaves every cart to libretro.
 const PLUS_ART_BASE =
   new URLSearchParams(location.search).get('plusart') ?? 'https://nelynes.github.io/slotPlus-art/';
 let artIndex = null;
@@ -173,6 +174,14 @@ function resolved(index, base) {
       e[media] = typeof v === 'string' ? new URL(v, base).href : v;
     }
     out[crc] = e;
+  }
+  // A named entry (a hack, a GBA Video pak) lists the checksum of every dump it covers. A checksum
+  // with an entry of its own keeps that one.
+  for (const [key, entry] of Object.entries(index ?? {})) {
+    if (!Array.isArray(entry?.crcs)) continue;
+    for (const crc of entry.crcs) {
+      if (typeof crc === 'string' && /^[0-9A-F]{8}$/i.test(crc)) out[crc.toUpperCase()] ??= out[key];
+    }
   }
   return out;
 }
@@ -656,7 +665,7 @@ async function identify(s) {
       const head = new Uint8Array(await file.slice(0, HEAD).arrayBuffer());
       // Only a GBA rom carries a game code. On a Game Boy cart 0xAC is inside the RST vectors,
       // so a code read from there is opcode bytes dressed up as one.
-      c.code = c.platform === 'GBA' ? header_code(head) : '';
+      c.code = c.platform === 'GBA' || c.platform === 'GBAV' ? header_code(head) : '';
       // Only a Game Boy pak's header picks its shell; slotPlus's carts are chosen by folder.
       if (c.platform === 'GB' || c.platform === 'GBC') c.head = head;
       const label = s.source.labels.get(labelKey(c.platform, c.stem));
@@ -808,6 +817,7 @@ const platformsOf = (s) => PLATFORMS.filter((p) => s.carts.some((c) => c.platfor
 // card of nothing but GBA carts shows no switcher and reads exactly as it did before.
 const PLATFORM_NAMES = {
   GBA: 'Game Boy Advance',
+  GBAV: 'Game Boy Advance Video',
   GB: 'Game Boy',
   GBC: 'Game Boy Color',
   WS: 'WonderSwan',
@@ -1207,11 +1217,10 @@ async function start() {
         : Promise.resolve({ index: null }),
     ),
   );
-  if (slotSet.error) {
-    banner(`The art set at ${ART_BASE} didn’t load (${slotSet.error.message}), so Game Boy carts use libretro’s logos.`);
+  if (plusSet.error) {
+    banner(`The art set at ${PLUS_ART_BASE} didn’t load (${plusSet.error.message}), so carts use libretro’s logos.`);
   }
-  // slotPlus's set is a bonus on top: when it can't be read, carts carry on without it, quietly.
-  if (plusSet.error) console.warn(`slotPlus art set at ${PLUS_ART_BASE} didn’t load: ${plusSet.error.message}`);
+  if (slotSet.error) console.warn(`The art set at ${ART_BASE} didn’t load: ${slotSet.error.message}`);
   if (slotSet.index || plusSet.index) {
     artIndex = { ...(slotSet.index ?? {}) };
     for (const [crc, entry] of Object.entries(plusSet.index ?? {})) {

@@ -18,7 +18,7 @@ const BY_TAG = {
 };
 
 export function smallPrint(platform, code, tags) {
-  if (platform !== 'GBA') return '';
+  if (platform !== 'GBA' && platform !== 'GBAV') return '';
   if (/^[A-Z0-9]{4}$/.test(code)) {
     const region = BY_LETTER[code[3]];
     return region ? `AGB-${code}-${region}` : `AGB-${code}`;
