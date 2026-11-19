@@ -11,6 +11,7 @@ use crate::{art, cart};
 /// Anything unrecognised is GBA, which is the folder the page falls back to as well.
 pub fn platform_of(dir: &str) -> Platform {
     match dir.to_ascii_uppercase().as_str() {
+        "GBAV" => Platform::Gbav,
         "GB" => Platform::Gb,
         "GBC" => Platform::Gbc,
         "WS" => Platform::Ws,

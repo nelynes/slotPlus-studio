@@ -12,6 +12,8 @@ const THUMBS = 'https://raw.githubusercontent.com/libretro-thumbnails/';
 // WonderSwan and NeoGeo Pocket folders each hold two systems, and there the extension says which.
 const NAMES = {
   GBA: 'Nintendo - Game Boy Advance',
+  // No-Intro and libretro file GBA Video paks with the GBA's games.
+  GBAV: 'Nintendo - Game Boy Advance',
   GB: 'Nintendo - Game Boy',
   GBC: 'Nintendo - Game Boy Color',
   WS: 'Bandai - WonderSwan',

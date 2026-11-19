@@ -656,7 +656,7 @@ async function identify(s) {
       const head = new Uint8Array(await file.slice(0, HEAD).arrayBuffer());
       // Only a GBA rom carries a game code. On a Game Boy cart 0xAC is inside the RST vectors,
       // so a code read from there is opcode bytes dressed up as one.
-      c.code = c.platform === 'GBA' ? header_code(head) : '';
+      c.code = c.platform === 'GBA' || c.platform === 'GBAV' ? header_code(head) : '';
       // Only a Game Boy pak's header picks its shell; slotPlus's carts are chosen by folder.
       if (c.platform === 'GB' || c.platform === 'GBC') c.head = head;
       const label = s.source.labels.get(labelKey(c.platform, c.stem));
@@ -808,6 +808,7 @@ const platformsOf = (s) => PLATFORMS.filter((p) => s.carts.some((c) => c.platfor
 // card of nothing but GBA carts shows no switcher and reads exactly as it did before.
 const PLATFORM_NAMES = {
   GBA: 'Game Boy Advance',
+  GBAV: 'Game Boy Advance Video',
   GB: 'Game Boy',
   GBC: 'Game Boy Color',
   WS: 'WonderSwan',

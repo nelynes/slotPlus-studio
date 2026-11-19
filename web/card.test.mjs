@@ -197,3 +197,13 @@ test('a card without shell files reads as empty where the browser refuses .ini n
   const source = await fromDirectory(windows(dirHandle({ ...GAMES, Config: {}, Labels: {} })));
   assert.deepEqual(await layers(source), { system: '', labels: '' });
 });
+
+test('GBA Video paks are carts on their own GBAV shelf', async () => {
+  const tree = { Games: { GBA: { 'A.gba': '' }, gbav: { 'Shrek.gba': '', 'notes.gbav': '' } } };
+  for (const source of [await fromDirectory(dirHandle(tree)), fromFiles(listed(tree))]) {
+    assert.deepEqual(
+      source.carts.map((c) => `${c.platform}/${c.stem}.${c.ext}`),
+      ['GBA/A.gba', 'GBAV/Shrek.gba'],
+    );
+  }
+});
