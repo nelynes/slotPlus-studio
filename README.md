@@ -13,8 +13,8 @@ slotPlusUltra at the commit `slot.ref` names, so a preview is the cart you will 
 Each game's label and logo is looked for in order, and the first source that has one is used:
 
 - **The [slotPlus art set](https://github.com/nelynes/slotPlus-art):** labels and logos made or
-  scanned for slotPlus, for any system. Where it and slot's set both have art for a game, it wins.
-- **slot's art set,** for Game Boy, Game Boy Color and Game Boy Advance.
+  scanned for slotPlus, for any system, and a copy of slot's art set for Game Boy, Game Boy Color
+  and Game Boy Advance. Where slotPlus has its own art for a game, it wins over slot's.
 - **libretro's logos,** for every system but the Lynx, which libretro has none for.
 - **Any game still without one:** its title screen from libretro, set on the label in the logo's
   place. This is how Lynx carts are dressed, since libretro has no Lynx logos.

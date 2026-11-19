@@ -93,7 +93,8 @@ export async function fetchIndex(base) {
 }
 
 export async function fetchArt(base, path) {
-  const r = await fetch(new URL(path, base));
+  // A merged index holds whole URLs, and with no second set there is no base to resolve against.
+  const r = await fetch(base ? new URL(path, base) : path);
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return new Uint8Array(await r.arrayBuffer());

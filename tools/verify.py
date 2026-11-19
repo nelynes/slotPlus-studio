@@ -320,9 +320,9 @@ def main():
         bare = f'http://127.0.0.1:{HTTP_PORT}/studio/'
         page.send('Page.navigate', url=bare)
         wait(lambda: page.eval("document.body && document.body.dataset.ready === 'true'"), 60, 'the bare studio to start')
-        if page.eval('window.__studio.artBase()') != 'https://art.slot-cfw.fyi/':
-            sys.exit(f'with no ?art= the studio uses {page.eval("window.__studio.artBase()")!r}, not the published set')
-        print('asserted: with no ?art= the studio uses https://art.slot-cfw.fyi/')
+        if page.eval('window.__studio.artBase()') != '':
+            sys.exit(f'with no ?art= the studio reads a second set, {page.eval("window.__studio.artBase()")!r}')
+        print('asserted: with no ?art= the studio reads only slotPlus\'s set')
         widths = page.eval("[document.querySelector('.credits'), document.querySelector('main.wrap')]"
                            ".map((e, i) => i ? e.clientWidth - parseFloat(getComputedStyle(e).paddingLeft) * 2"
                            " : e.getBoundingClientRect().width)")
