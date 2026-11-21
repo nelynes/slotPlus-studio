@@ -27,6 +27,12 @@ const NAMES = {
 const BY_EXTENSION = {
   WS: { wsc: 'Bandai - WonderSwan Color' },
   NGP: { ngc: 'SNK - Neo Geo Pocket Color', ngpc: 'SNK - Neo Geo Pocket Color' },
+  // slotPlus's PokeDaisy shelf: each game is looked up with its own system's.
+  PokeDaisy: {
+    gba: 'Nintendo - Game Boy Advance',
+    gb: 'Nintendo - Game Boy',
+    gbc: 'Nintendo - Game Boy Color',
+  },
 };
 
 // The database a cart is looked up in, from its card folder and its file's extension.
