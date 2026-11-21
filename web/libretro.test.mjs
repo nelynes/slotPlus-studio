@@ -43,3 +43,9 @@ test('a DS game code finds the first retail dump that carries it', () => {
 test('a DS cart is looked up in the DS database', () => {
   assert.equal(dbFor('NDS', 'nds'), 'Nintendo - Nintendo DS');
 });
+
+test('a PokeDaisy game is looked up with its own system', () => {
+  assert.equal(dbFor('PokeDaisy', 'gba'), 'Nintendo - Game Boy Advance');
+  assert.equal(dbFor('PokeDaisy', 'gb'), 'Nintendo - Game Boy');
+  assert.equal(dbFor('PokeDaisy', 'gbc'), 'Nintendo - Game Boy Color');
+});

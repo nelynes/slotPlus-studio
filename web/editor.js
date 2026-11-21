@@ -137,8 +137,8 @@ export function createEditor(api) {
       const face = ok && hasFile ? api.tileFace(c, kind) : null;
       canvas.hidden = !face;
       if (face) {
-        [canvas.width, canvas.height] = api.box(c.platform);
-        api.draw(canvas, face, c.platform);
+        [canvas.width, canvas.height] = api.box(c.sys);
+        api.draw(canvas, face, c.sys);
       }
     }
   }
@@ -150,7 +150,7 @@ export function createEditor(api) {
     $('ed-name').textContent = api.name(c);
     const face = api.face(c);
     $('ed-face').hidden = !face;
-    if (face) api.draw($('ed-face'), face, c.platform);
+    if (face) api.draw($('ed-face'), face, c.sys);
 
     const label = api.canLabel(c);
     $('ed-game').disabled = !label;
@@ -184,7 +184,7 @@ export function createEditor(api) {
     press('ed-finish', shell.finish);
     enable('ed-finish', shells && !shell.auto);
     // The outline picks a Game Boy pak's shape, so only a Game Boy cart has one to pick.
-    $('ed-outline-row').hidden = c.platform !== 'GB' && c.platform !== 'GBC';
+    $('ed-outline-row').hidden = c.sys !== 'GB' && c.sys !== 'GBC';
     press('ed-outline', shell.outline);
     enable('ed-outline', shells);
 
@@ -205,7 +205,7 @@ export function createEditor(api) {
     visit(c);
     closePops();
     c.el.root.classList.add('current');
-    [$('ed-face').width, $('ed-face').height] = api.box(c.platform);
+    [$('ed-face').width, $('ed-face').height] = api.box(c.sys);
     panel.hidden = false;
     document.body.classList.add('editing');
     refresh();

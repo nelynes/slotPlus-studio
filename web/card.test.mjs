@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fromDirectory, fromFiles } from './card.js';
+import { fromDirectory, fromFiles, labelKey, systemOf } from './card.js';
 
 const notFound = () => Object.assign(new Error('not found'), { name: 'NotFoundError' });
 
@@ -206,4 +206,23 @@ test('GBA Video paks are carts on their own GBAV shelf', async () => {
       ['GBA/A.gba', 'GBAV/Shrek.gba'],
     );
   }
+});
+
+test('the PokeDaisy shelf holds three systems, each drawn as its own cart', async () => {
+  const tree = {
+    Games: { PokeDaisy: { 'Emerald.gba': '', 'Red.gb': '', 'Crystal.gbc': '', 'notes.txt': '' } },
+    Labels: { PokeDaisy: { 'Red.png': '' } },
+  };
+  for (const source of [await fromDirectory(dirHandle(tree)), fromFiles(listed(tree))]) {
+    assert.deepEqual(
+      source.carts.map((c) => `${c.platform}/${c.stem}.${c.ext}`),
+      ['PokeDaisy/Crystal.gbc', 'PokeDaisy/Emerald.gba', 'PokeDaisy/Red.gb'],
+    );
+    assert.ok(source.labels.has(labelKey('PokeDaisy', 'Red')));
+  }
+  assert.deepEqual(
+    ['gba', 'gb', 'gbc'].map((e) => systemOf('PokeDaisy', e)),
+    ['GBA', 'GB', 'GBC'],
+  );
+  assert.equal(systemOf('GBC', 'gb'), 'GBC', 'elsewhere the folder decides');
 });
