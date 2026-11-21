@@ -6,7 +6,13 @@
 // alike, and the folder is what decides the platform: the rom is never opened to ask.
 // slot's three, newest first, then slotPlus's in the order its shelves run. Each is spelled as
 // slotPlus names its card folder.
-export const PLATFORMS = ['GBA', 'GBAV', 'GBC', 'GB', 'WS', 'Lynx', 'GG', 'NGP', 'TG16', 'NDS', 'PokeMini'];
+export const PLATFORMS = ['GBA', 'GBAV', 'GBC', 'GB', 'WS', 'Lynx', 'GG', 'NGP', 'TG16', 'NDS', 'PokeMini', 'PokeDaisy'];
+
+// slotPlus's PokeDaisy shelf holds Game Boy Advance, Game Boy and Game Boy Color games side by
+// side, each a cart of its own system: the folder files it, the extension says which system it is.
+const POKEDAISY_SYSTEMS = { gba: 'GBA', gb: 'GB', gbc: 'GBC' };
+export const systemOf = (platform, extension) =>
+  platform === 'PokeDaisy' ? (POKEDAISY_SYSTEMS[extension] ?? 'GBA') : platform;
 
 // slotPlus's own rule, from slot-store's platform.rs. A .gba under GB/ is not a Game Boy cart and
 // is passed over in silence, the way slot passes over it.
@@ -23,6 +29,7 @@ const EXTENSIONS = {
   TG16: ['pce'],
   NDS: ['nds'],
   PokeMini: ['min'],
+  PokeDaisy: ['gba', 'gb', 'gbc'],
 };
 const ANY_ROM = Object.values(EXTENSIONS).flat();
 

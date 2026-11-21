@@ -24,7 +24,7 @@ import init, {
   stub_target,
   thumbnail_name,
 } from './pkg/slot_cart_studio.js';
-import { fromDirectory, fromFiles, labelKey, PLATFORMS } from './card.js';
+import { fromDirectory, fromFiles, labelKey, PLATFORMS, systemOf } from './card.js';
 import { dbFor, fetchArt, fetchDat, fetchIndex, fetchThumb, limiter, serialIndex } from './libretro.js';
 import { createEditor } from './editor.js';
 import { amend, commit } from './history.js';
@@ -63,8 +63,11 @@ const track = (promise) => {
 
 function newCart({ platform, stem, ext, file }) {
   return {
-    // The folder the rom sits in, and so the only thing that says which console it is for.
+    // The folder the rom sits in: where its label goes, and the tab it shows under.
     platform,
+    // The console its cart is drawn for. The folder says, except on slotPlus's PokeDaisy shelf,
+    // which holds three systems' games, and there the extension does.
+    sys: systemOf(platform, ext ?? ''),
     stem,
     // The rom's extension. slotPlus reads a WonderSwan cart's default shell from it.
     ext: ext ?? '',
@@ -233,7 +236,7 @@ function withKindLabel(c, kind, use) {
   if (kind === 'real' || kind === 'customLabel') {
     const bytes = kind === 'real' ? realBytesOf(c) : c.customLabelBytes;
     if (!bytes) return null;
-    const label = Label.full(bytes, c.platform);
+    const label = Label.full(bytes, c.sys);
     try {
       return use(label);
     } finally {
@@ -244,7 +247,7 @@ function withKindLabel(c, kind, use) {
   if (!bytes) return null;
   const look = kind === 'logo' ? c.look : null;
   const deep = c.deep ?? look?.ground ?? Array.from(stop_colours(baseHueOf(c), lumaOf(c, kind))).slice(0, 3);
-  return withLabel(bytes, deep, c.platform, use, look?.band ?? null);
+  return withLabel(bytes, deep, c.sys, use, look?.band ?? null);
 }
 
 const withCartLabel = (c, use) => withKindLabel(c, wearing(c).kind, use);
@@ -253,16 +256,16 @@ const BLANK = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjd
 
 function faceFor(c, kind) {
   if (kind === 'card') return c.existing;
-  if (kind === 'none') return existing_face(new Uint8Array(0), c.platform, c.code, c.head, c.shell, c.stem, c.ext);
+  if (kind === 'none') return existing_face(new Uint8Array(0), c.sys, c.code, c.head, c.shell, c.stem, c.ext);
   if (kind === 'unfilled') {
-    const label = Label.full(BLANK, c.platform);
+    const label = Label.full(BLANK, c.sys);
     try {
-      return label.face(c.platform, c.code, c.head, c.shell, c.stem, c.ext);
+      return label.face(c.sys, c.code, c.head, c.shell, c.stem, c.ext);
     } finally {
       label.free();
     }
   }
-  return withKindLabel(c, kind, (label) => label.face(c.platform, c.code, c.head, c.shell, c.stem, c.ext));
+  return withKindLabel(c, kind, (label) => label.face(c.sys, c.code, c.head, c.shell, c.stem, c.ext));
 }
 
 // Whether slot's decoder takes a logo, asked the only way the module can be asked: by making one.
@@ -310,7 +313,7 @@ function buildCard(c) {
   const root = $('card-tpl').content.firstElementChild.cloneNode(true);
   const q = (selector) => root.querySelector(selector);
   c.el = { root, canvas: q('canvas'), face: q('.face'), stem: q('.stem'), print: q('.print'), game: q('.game') };
-  const [boxW, boxH] = boxOf(c.platform);
+  const [boxW, boxH] = boxOf(c.sys);
   c.el.canvas.width = boxW;
   c.el.canvas.height = boxH;
   // The device's own title, with the file it came from on hover.
@@ -384,10 +387,10 @@ function paint(c) {
     throw e;
   }
   canvas.hidden = !face;
-  if (face) drawFace(canvas, face, c.platform);
+  if (face) drawFace(canvas, face, c.sys);
   game.textContent = describe(c, state);
   // The game code is read with the ROM, after the card is built.
-  c.el.print.textContent = smallPrint(c.platform, c.code, c.tags);
+  c.el.print.textContent = smallPrint(c.sys, c.code, c.tags);
   updateWriteBar();
   updateFillButton();
   if (editor.current() === c) editor.refresh();
@@ -418,7 +421,7 @@ async function redress(s, c) {
 
 const choiceOf = (c) => {
   // A two-tone shell (a Famicom Mini cart) carries its back's colour as a fourth word.
-  const [outline, colour, finish, back = ''] = (c.shell || auto_shell(c.platform, c.code, c.head, c.ext)).split(' ');
+  const [outline, colour, finish, back = ''] = (c.shell || auto_shell(c.sys, c.code, c.head, c.ext)).split(' ');
   return { outline, colour, finish, back };
 };
 
@@ -592,7 +595,7 @@ const serials = new Map();
 // the game in the database, and that game's checksum stands in for the file's. A code the database
 // doesn't know matches nothing, and the cart goes to its title screen like any unmatched one.
 async function checksum(c, file) {
-  if (c.platform !== 'NDS') return crcOf(file);
+  if (c.sys !== 'NDS') return crcOf(file);
   const code = String.fromCharCode(...new Uint8Array(await file.slice(0x0c, 0x10).arrayBuffer()));
   if (!serials.has(c.db)) {
     try {
@@ -618,7 +621,7 @@ async function crcOf(file) {
 // A HuCard dumped with a copier's 512-byte header in front: No-Intro lists the card without it.
 const COPIER_HEADER = 512;
 async function headerlessCrcOf(c, file) {
-  if (c.platform !== 'TG16' || file.size % 8192 !== COPIER_HEADER) return null;
+  if (c.sys !== 'TG16' || file.size % 8192 !== COPIER_HEADER) return null;
   return crcOf(file.slice(COPIER_HEADER));
 }
 // The game a cart's checksum names, trying the headerless one when the plain one is unknown.
@@ -665,15 +668,15 @@ async function identify(s) {
       const head = new Uint8Array(await file.slice(0, HEAD).arrayBuffer());
       // Only a GBA rom carries a game code. On a Game Boy cart 0xAC is inside the RST vectors,
       // so a code read from there is opcode bytes dressed up as one.
-      c.code = c.platform === 'GBA' || c.platform === 'GBAV' ? header_code(head) : '';
+      c.code = c.sys === 'GBA' || c.sys === 'GBAV' ? header_code(head) : '';
       // Only a Game Boy pak's header picks its shell; slotPlus's carts are chosen by folder.
-      if (c.platform === 'GB' || c.platform === 'GBC') c.head = head;
+      if (c.sys === 'GB' || c.sys === 'GBC') c.head = head;
       const label = s.source.labels.get(labelKey(c.platform, c.stem));
       if (label) {
         const bytes = new Uint8Array(await (await label()).arrayBuffer());
         c.existingPng = bytes;
         c.choice = 'card';
-        c.existing = existing_face(bytes, c.platform, c.code, c.head, c.shell, c.stem, c.ext);
+        c.existing = existing_face(bytes, c.sys, c.code, c.head, c.shell, c.stem, c.ext);
         c.looking = false;
       } else {
         c.crc = await checksum(c, file);
@@ -827,6 +830,7 @@ const PLATFORM_NAMES = {
   TG16: 'TurboGrafx-16',
   NDS: 'Nintendo DS',
   PokeMini: 'Pokémon mini',
+  PokeDaisy: 'PokeDaisy',
 };
 
 
@@ -906,8 +910,8 @@ async function askFill(s) {
     }
     canvas.hidden = !face;
     if (face) {
-      [canvas.width, canvas.height] = boxOf(sample.platform);
-      drawFace(canvas, face, sample.platform);
+      [canvas.width, canvas.height] = boxOf(sample.sys);
+      drawFace(canvas, face, sample.sys);
     }
   }
   if (!$('fill').open) {
@@ -964,7 +968,7 @@ async function writeLabels() {
         try {
           [png, face] = withCartLabel(c, (label) => [
             label.png(),
-            label.face(c.platform, c.code, c.head, c.shell, c.stem, c.ext),
+            label.face(c.sys, c.code, c.head, c.shell, c.stem, c.ext),
           ]);
           c.result = await s.source.write(c.platform, c.stem, png, !!c.existingPng);
         } catch (e) {
@@ -1145,7 +1149,7 @@ function noMatch(c) {
 // follow-on inputs wait for a frame.
 function changed(c, soon = false) {
   try {
-    if (c.existingPng) c.existing = existing_face(c.existingPng, c.platform, c.code, c.head, c.shell, c.stem, c.ext);
+    if (c.existingPng) c.existing = existing_face(c.existingPng, c.sys, c.code, c.head, c.shell, c.stem, c.ext);
   } catch (e) {
     if (trapped(e)) return;
     throw e;

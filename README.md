@@ -7,7 +7,8 @@ face slotPlus draws. Runs in the browser at
 Cart Studio+ is [slot's Cart Studio](https://github.com/BrandonKowalski/slot-cart-studio) for
 slotPlus. It covers slot's Game Boy Advance, Game Boy and Game Boy Color, and slotPlus's
 WonderSwan and WonderSwan Color, Atari Lynx, Game Gear, NeoGeo Pocket and NeoGeo Pocket Color,
-TurboGrafx-16, Nintendo DS and Pokémon mini. Its carts are drawn by slotPlus's own source, compiled for the browser from
+TurboGrafx-16, Nintendo DS and Pokémon mini, and the Game Boy Advance, Game Boy and Game Boy Color
+games on slotPlus's PokeDaisy shelf (`Games/PokeDaisy/`, labelled into `Labels/PokeDaisy/`). Its carts are drawn by slotPlus's own source, compiled for the browser from
 slotPlusUltra at the commit `slot.ref` names, so a preview is the cart you will see on the handheld.
 
 Each game's label and logo is looked for in order, and the first source that has one is used:
